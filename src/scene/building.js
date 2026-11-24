@@ -30,17 +30,31 @@ const MOON_SPRITE = [
   '...xxxx..'
 ];
 
-const STARS = Array.from({ length: 28 }, (_, i) => ({
-  x: (i * 53 + 11) % CANVAS_W,
-  y: (i * 29 + 7) % 140,
-  phase: i * 0.9,
-  big: i % 5 === 0
-}));
+// Scattered stars strictly in the visible sky (above the roof y < 44, or side sky margins)
+const STARS = [
+  { x: 10, y: 14, phase: 0.2, big: false },
+  { x: 48, y: 9, phase: 1.1, big: true },
+  { x: 64, y: 24, phase: 2.3, big: false },
+  { x: 82, y: 11, phase: 0.7, big: false },
+  { x: 96, y: 28, phase: 3.1, big: true },
+  { x: 114, y: 8, phase: 1.9, big: false },
+  { x: 128, y: 20, phase: 4.2, big: false },
+  { x: 142, y: 34, phase: 2.8, big: false },
+  { x: 150, y: 12, phase: 0.4, big: true },
+  { x: 184, y: 26, phase: 3.7, big: false },
+  { x: 196, y: 6, phase: 1.5, big: false },
+  { x: 238, y: 16, phase: 2.1, big: true },
+  { x: 247, y: 32, phase: 0.9, big: false },
+  { x: 6, y: 68, phase: 3.5, big: false },
+  { x: 9, y: 112, phase: 1.4, big: false },
+  { x: 248, y: 84, phase: 2.6, big: false },
+  { x: 245, y: 130, phase: 4.0, big: false }
+];
 
 const CLOUDS = [
-  { baseX: 24, y: 20, w: 28, speed: 3.2 },
-  { baseX: 132, y: 14, w: 22, speed: 2.1 },
-  { baseX: 208, y: 30, w: 30, speed: 2.7 }
+  { baseX: 24, y: 16, w: 28, speed: 3.2 },
+  { baseX: 132, y: 10, w: 22, speed: 2.1 },
+  { baseX: 208, y: 24, w: 30, speed: 2.7 }
 ];
 
 function drawWindow(ctx, x, y, day) {
@@ -63,9 +77,9 @@ export function buildStaticScene(day, completed) {
     rect(ctx, 0, y, CANVAS_W, 6, mixColor(topSky, botSky, y / GROUND_Y));
   }
 
-  // Crescent moon at dusk/night
+  // Crescent moon at dusk/night (upper-left sky, clear of the roof crane)
   if (day < 0.55) {
-    drawGridSprite(ctx, 218, 12, MOON_SPRITE, { x: '#fff3b0' }, 2);
+    drawGridSprite(ctx, 22, 8, MOON_SPRITE, { x: '#fff3b0' }, 2);
   }
 
   // Sidewalk & asphalt ground

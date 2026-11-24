@@ -2,8 +2,8 @@ import { BOOK_COLORS } from '../config.js';
 import { rect } from '../sprites.js';
 
 export function drawThirdFloor(ctx, fy) {
-  // Warm ceiling pendant lights across the library & classroom
-  for (const lx of [84, 154, 212]) {
+  // Warm ceiling pendant lights across the library & classroom (clear of right window)
+  for (const lx of [84, 154]) {
     rect(ctx, lx, fy - 86, 2, 10, '#5a6070');
     rect(ctx, lx - 5, fy - 76, 12, 4, '#ffe599');
     rect(ctx, lx - 3, fy - 75, 8, 2, '#fff9db');
