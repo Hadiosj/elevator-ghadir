@@ -16,6 +16,7 @@ import {
   TOP_OFFSET,
   clamp01,
   getDayFactor,
+  mixColor,
   pickRandom,
   randRange
 } from './config.js';
@@ -48,6 +49,16 @@ export function mountScene({ canvasEl, campaign }) {
   let displayReach = targetReach;
   let day = getDayFactor();
   let completed = progress >= 1;
+
+  const syncSkyTheme = (dayFactor) => {
+    const topSky = mixColor('#0c1533', '#5baaf7', dayFactor);
+    const botSky = mixColor('#263973', '#d4ecff', dayFactor);
+    const rootEl = document.documentElement;
+    rootEl.style.setProperty('--sky-top', topSky);
+    rootEl.style.setProperty('--sky-bot', botSky);
+    rootEl.dataset.sky = dayFactor >= 0.55 ? 'day' : 'night';
+  };
+  syncSkyTheme(day);
 
   canvasEl.width = CANVAS_W;
   canvasEl.height = CANVAS_H;
@@ -137,6 +148,7 @@ export function mountScene({ canvasEl, campaign }) {
       const nextDay = getDayFactor();
       if (Math.abs(nextDay - day) > 0.03) {
         day = nextDay;
+        syncSkyTheme(day);
         bgCanvas = buildStaticScene(day, completed);
       }
     }
@@ -182,7 +194,8 @@ export function mountScene({ canvasEl, campaign }) {
       }
     }
 
-    // Render scene
+    // Render scene (clear transparent sky first)
+    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
     ctx.drawImage(bgCanvas, 0, 0);
     drawAnimatedSky(ctx, day, tt, reducedMotion);
     drawAnimatedCraneHook(ctx, completed, tt, reducedMotion);

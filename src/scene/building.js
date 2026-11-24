@@ -8,8 +8,7 @@ import {
   SHAFT_X,
   TOP_OFFSET,
   WALL_LEFT,
-  WALL_RIGHT,
-  mixColor
+  WALL_RIGHT
 } from './config.js';
 import { drawGridSprite, rect } from './sprites.js';
 import { drawParkingFloor } from './floors/parking.js';
@@ -70,12 +69,7 @@ export function buildStaticScene(day, completed) {
   bg.height = CANVAS_H;
   const ctx = bg.getContext('2d');
 
-  // Sky gradient
-  const topSky = mixColor('#0e1633', '#6cb8ff', day);
-  const botSky = mixColor('#2b3a7a', '#d8f0ff', day);
-  for (let y = 0; y < GROUND_Y; y += 6) {
-    rect(ctx, 0, y, CANVAS_W, 6, mixColor(topSky, botSky, y / GROUND_Y));
-  }
+  // Sky is transparent so the full-viewport CSS sky gradient blends seamlessly behind the scene
 
   // Crescent moon at dusk/night (upper-left sky, clear of the roof crane)
   if (day < 0.55) {
