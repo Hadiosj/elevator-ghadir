@@ -208,12 +208,12 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--surface-muted);
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .sheet-backdrop {
@@ -403,5 +403,13 @@ button {
   .sheet {
     border-radius: 18px;
     padding-bottom: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-fill,
+  .sheet-backdrop,
+  .sheet {
+    transition: none;
   }
 }

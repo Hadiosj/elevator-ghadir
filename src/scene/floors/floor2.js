@@ -149,6 +149,23 @@ export function drawSecondFloorForeground(ctx, fy) {
   rect(ctx, 88, fy - 31, 7, 1, '#22262c');
 }
 
-export function drawSecondFloorAnimated() {
-  // Reserved for future animated 2nd-floor elements
+export function drawSecondFloorAnimated(ctx, fy, tt, reducedMotion = false) {
+  if (reducedMotion) return;
+
+  // Spinning blades inside the black floor fan (x: 152, y: fy - 15)
+  const phase = ((tt * 14) | 0) % 2;
+  if (phase === 0) {
+    rect(ctx, 155, fy - 14, 1, 5, '#9aa5b1');
+    rect(ctx, 153, fy - 12, 5, 1, '#9aa5b1');
+  } else {
+    rect(ctx, 154, fy - 13, 1, 1, '#9aa5b1');
+    rect(ctx, 156, fy - 13, 1, 1, '#9aa5b1');
+    rect(ctx, 155, fy - 12, 1, 1, '#cbd2d9');
+    rect(ctx, 154, fy - 11, 1, 1, '#9aa5b1');
+    rect(ctx, 156, fy - 11, 1, 1, '#9aa5b1');
+  }
+
+  // Subtle fabric shimmer on bottom edge of Scout flag
+  const ripple = ((tt * 2.5) | 0) % 3;
+  rect(ctx, 205 + ripple * 7, fy - 54, 7, 1, 'rgba(255, 255, 255, 0.22)');
 }

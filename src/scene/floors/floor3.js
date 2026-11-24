@@ -2,6 +2,13 @@ import { BOOK_COLORS } from '../config.js';
 import { rect } from '../sprites.js';
 
 export function drawThirdFloor(ctx, fy) {
+  // Warm ceiling pendant lights across the library & classroom
+  for (const lx of [84, 154, 212]) {
+    rect(ctx, lx, fy - 86, 2, 10, '#5a6070');
+    rect(ctx, lx - 5, fy - 76, 12, 4, '#ffe599');
+    rect(ctx, lx - 3, fy - 75, 8, 2, '#fff9db');
+  }
+
   // Left side: library bookshelf + reading armchair
   rect(ctx, 56, fy - 60, 38, 60, '#6b4423');
   rect(ctx, 58, fy - 58, 34, 54, '#3d2615');

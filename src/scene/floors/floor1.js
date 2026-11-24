@@ -1,16 +1,17 @@
 import { drawGridSprite, rect } from '../sprites.js';
 
-const CALLIGRAPHY_36 = [
-  '..............................r.....',
-  '..............................r.....',
-  '..............................r.....',
-  '..........r............rr.....r.....',
-  '...r..rr..r..r..r..r..r..r....r...r.',
-  '...r......r..r..r..r..r.......r...r.',
-  '...r......r..rrrrrrrr.rrrrr...rrrrr.',
-  '....r....r..........................',
-  '.....rrrr.....r.r..............r.r..',
-  '....................................'
+// Right-to-left Arabic calligraphy: "يا حسين" (Ya Hussein)
+const CALLIGRAPHY_YA_HUSSEIN = [
+  '......................................',
+  '.............................r........',
+  '.............................r........',
+  '....................rrr......r........',
+  '...........r..r.r.r....r.....r....r...',
+  '..r........r..r.r.r...r......r....r...',
+  '..r..r..rrrrrrrrrrrrrr.......rrrrrr...',
+  '..r.....r.............................',
+  '...r...r..r.r..................r.r....',
+  '....rrr...............................'
 ];
 
 function drawWallSpeaker(ctx, x, y, facingRight) {
@@ -45,12 +46,12 @@ export function drawFirstFloor(ctx, fy) {
     rect(ctx, x, fy - 5, 2, 4, '#e5d4a1');
   }
 
-  // Single black Ashura flag on wall with red Arabic calligraphy
-  const flagX = 132;
+  // Single black Ashura flag on wall with red Arabic calligraphy ("يا حسين")
+  const flagX = 131;
   const flagY = fy - 70;
-  rect(ctx, flagX - 1, flagY - 2, 44, 2, '#3d2c1e');
-  rect(ctx, flagX, flagY, 42, 18, '#14151a');
-  drawGridSprite(ctx, flagX + 3, flagY + 4, CALLIGRAPHY_36, { r: '#df2828' }, 1);
+  rect(ctx, flagX - 1, flagY - 2, 46, 2, '#3d2c1e');
+  rect(ctx, flagX, flagY, 44, 18, '#14151a');
+  drawGridSprite(ctx, flagX + 3, flagY + 4, CALLIGRAPHY_YA_HUSSEIN, { r: '#df2828' }, 1);
 
   // Hanging speakers on left and right ends of the prayer hall
   drawWallSpeaker(ctx, 96, fy - 66, true);

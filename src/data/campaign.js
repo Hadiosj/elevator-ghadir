@@ -1,4 +1,3 @@
-export const FLOOR_SHORT = ['P', '1', '2', '3'];
 export const FLOOR_NAMES = ['Parking', '1er étage', '2e étage', '3e étage'];
 
 export const DEFAULT_CAMPAIGN = {

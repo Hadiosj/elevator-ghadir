@@ -8,6 +8,8 @@ export function createElevator(unlockedLevel) {
   const car = {
     off: 0,
     tgt: null,
+    vel: 0,
+    dir: 0,
     open: 0,
     wait: 0,
     riders: []
@@ -25,6 +27,7 @@ export function createElevator(unlockedLevel) {
     const maxOff = FLOOR_H * maxLevel;
     if (car.off > maxOff) {
       car.off = maxOff;
+      car.vel = 0;
     }
     if (car.tgt != null && car.tgt > maxOff) {
       car.tgt = maxOff;
@@ -36,25 +39,55 @@ export function createElevator(unlockedLevel) {
     }
   };
 
+  const inspectLevel = (level) => {
+    const clamped = Math.max(0, Math.min(maxLevel, level));
+    const target = FLOOR_H * clamped;
+    if (Math.abs(target - car.off) >= 2 && car.riders.length === 0) {
+      car.tgt = target;
+      car.wait = 0;
+    }
+  };
+
   const update = (dt, peopleMgr) => {
     const { people, afterExit } = peopleMgr;
 
     if (car.tgt != null) {
       if (car.open > 0.02) {
         car.open = clamp01(car.open - dt * 3);
+        car.vel = 0;
         return;
       }
       const dx = car.tgt - car.off;
-      const step = 48 * dt;
-      if (Math.abs(dx) <= step) {
+      const dist = Math.abs(dx);
+      const sign = Math.sign(dx);
+      car.dir = sign;
+
+      // Smooth ease-in / ease-out velocity curve
+      const maxSpeed = 62;
+      const decelLimit = Math.max(14, Math.sqrt(2 * 95 * dist));
+      const desiredSpeed = Math.min(maxSpeed, decelLimit);
+      const accel = 110 * dt;
+      if (car.vel < desiredSpeed) {
+        car.vel = Math.min(desiredSpeed, car.vel + accel);
+      } else {
+        car.vel = desiredSpeed;
+      }
+
+      const step = car.vel * dt;
+      if (dist <= step || dist < 0.8) {
         car.off = car.tgt;
         car.tgt = null;
+        car.vel = 0;
+        car.dir = 0;
         car.wait = 0.35;
       } else {
-        car.off += Math.sign(dx) * step;
+        car.off += sign * step;
       }
       return;
     }
+
+    car.vel = 0;
+    car.dir = 0;
 
     const level = levelAt(car.off);
     const exitingHere = level >= 0 && car.riders.some((q) => q.dest === level);
@@ -129,12 +162,24 @@ export function createElevator(unlockedLevel) {
     const y = by - 32;
 
     // Steel hoist cable
-    rect(ctx, SHAFT_X + 14, 68, 4, y - 68, '#8a93a3');
+    const cableH = Math.max(0, y - 68);
+    if (cableH > 0) {
+      rect(ctx, SHAFT_X + 14, 68, 4, cableH, '#8a93a3');
+      rect(ctx, SHAFT_X + 15, 68, 1, cableH, '#b8c2d1');
+    }
 
     // Cab housing & warm interior
     rect(ctx, SHAFT_X, y, SHAFT_W, 32, '#7f8c9a');
-    rect(ctx, SHAFT_X + 2, y + 2, SHAFT_W - 4, 30, '#fff3c4');
-    rect(ctx, SHAFT_X + 8, y, 16, 2, '#ffe066');
+    rect(ctx, SHAFT_X + 2, y + 2, SHAFT_W - 4, 29, '#fff3c4');
+    // Interior ceiling lamp
+    rect(ctx, SHAFT_X + 8, y + 2, 16, 2, '#ffe066');
+
+    // Top direction indicator light when moving
+    if (car.dir !== 0) {
+      const col = car.dir > 0 ? '#2ecc71' : '#ff7a1a';
+      rect(ctx, SHAFT_X + 13, y - 2, 6, 2, '#2b2d42');
+      rect(ctx, SHAFT_X + 15, y - 2, 2, 2, col);
+    }
 
     for (const rider of car.riders) {
       drawPerson(
@@ -145,11 +190,20 @@ export function createElevator(unlockedLevel) {
       );
     }
 
-    // Sliding doors
+    // Sliding doors with center seam & frosted glass window
     const doorW = 2 + Math.round(12 * (1 - car.open));
-    rect(ctx, SHAFT_X + 2, y + 2, doorW, 30, '#9aa7b4');
-    rect(ctx, SHAFT_X + SHAFT_W - 2 - doorW, y + 2, doorW, 30, '#9aa7b4');
+    const leftDoorX = SHAFT_X + 2;
+    const rightDoorX = SHAFT_X + SHAFT_W - 2 - doorW;
+    rect(ctx, leftDoorX, y + 2, doorW, 29, '#9aa7b4');
+    rect(ctx, rightDoorX, y + 2, doorW, 29, '#9aa7b4');
+    // Subtle inner bevel & glass slits when doors are mostly closed
+    if (doorW >= 7) {
+      rect(ctx, leftDoorX + doorW - 1, y + 2, 1, 29, '#6c7a89');
+      rect(ctx, rightDoorX, y + 2, 1, 29, '#6c7a89');
+      rect(ctx, leftDoorX + 2, y + 7, doorW - 5, 10, '#c8d6e5');
+      rect(ctx, rightDoorX + 3, y + 7, doorW - 5, 10, '#c8d6e5');
+    }
   };
 
-  return { car, update, draw, setUnlockedLevel };
+  return { car, update, draw, setUnlockedLevel, inspectLevel };
 }

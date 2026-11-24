@@ -39,7 +39,7 @@ export function createAmbientCharacters() {
     { n: 'Fidèle', lv: 1, x: 144, p: 'stand', jamaa: true, sh: '#3b4252', hr: '#141414', pt: '#1f2937', d: 1 },
 
     // 2nd floor: Scout blue room (active even before elevator reaches floor 2)
-    { n: 'Chef au pupitre', lv: 2, x: 101, p: 'stand', oy: -9, sh: '#d9c9a0', nk: '#1c3278', hr: '#2b1b12', d: 1, fidget: true },
+    { n: 'Chef au pupitre', lv: 2, x: 101, p: 'stand', oy: -9, behindDesk: true, sh: '#d9c9a0', nk: '#1c3278', hr: '#2b1b12', d: 1, fidget: true },
     { n: 'Éclaireuse', lv: 2, x: 146, p: 'stand', sh: '#d9c9a0', nk: '#c81e1e', hijab: true, hj: '#6b1d2f', d: -1, roamMin: 132, roamMax: 188, tx: 172, t: 3 },
     { n: 'Éclaireur', lv: 2, x: 186, p: 'sit', sh: '#d9c9a0', nk: '#0e6b2f', hr: '#2b1b12', d: -1, roamMin: 60, roamMax: 192, tx: 66, t: 4 },
 
@@ -201,11 +201,13 @@ function drawHead(ctx, person, x, headTopY, d) {
     // Hijab wrap around crown, back of head, and shoulders
     rect(ctx, x - 4, headTopY - 1, 8, 7, hj);
     rect(ctx, d > 0 ? x - 1 : x - 3, headTopY + 1, 4, 4, person.sk);
+    rect(ctx, d > 0 ? x + 1 : x - 2, headTopY + 2, 1, 1, '#1f242b');
     rect(ctx, x - 4, headTopY + 6, 8, 2, hj);
     return;
   }
   rect(ctx, x - 3, headTopY, 6, 6, person.sk);
   rect(ctx, x - 3, headTopY, 6, 2, person.hr);
+  rect(ctx, d > 0 ? x + 1 : x - 2, headTopY + 3, 1, 1, '#1f242b');
 }
 
 export function drawPerson(ctx, person, x, fyBase) {
@@ -283,15 +285,22 @@ export function drawPerson(ctx, person, x, fyBase) {
 
   // Standing / walking
   const tallExtra = person.tall ? 4 : 0;
+  const stride = person.mvg ? (((person.a2 | 0) % 2) ? 1 : -1) : 0;
   if (person.hijab) {
     // Modest tunic/dress silhouette
     rect(ctx, x - 4, y - 12 - tallExtra, 9, 9 + tallExtra, person.sh);
-    rect(ctx, x - 3, y - 3, 3, 3, person.pt);
-    rect(ctx, x + 1, y - 3, 3, 3, person.pt);
+    rect(ctx, x - 3 + stride, y - 3, 3, 2, person.pt);
+    rect(ctx, x + 1 - stride, y - 3, 3, 2, person.pt);
+    rect(ctx, x - 3 + stride, y - 1, 3, 1, '#1b1e24');
+    rect(ctx, x + 1 - stride, y - 1, 3, 1, '#1b1e24');
   } else {
+    const legH = 6 + Math.floor(tallExtra / 2);
+    const legY = y - legH;
     rect(ctx, x - 4, y - 12 - tallExtra, 9, 6 + Math.ceil(tallExtra / 2), person.sh);
-    rect(ctx, x - 3, y - 6 - Math.floor(tallExtra / 2), 3, 6 + Math.floor(tallExtra / 2), person.pt);
-    rect(ctx, x + 1, y - 6 - Math.floor(tallExtra / 2), 3, 6 + Math.floor(tallExtra / 2), person.pt);
+    rect(ctx, x - 3 + stride, legY, 3, legH - 1, person.pt);
+    rect(ctx, x + 1 - stride, legY, 3, legH - 1, person.pt);
+    rect(ctx, x - 3 + stride, y - 1, 3, 1, '#1b1e24');
+    rect(ctx, x + 1 - stride, y - 1, 3, 1, '#1b1e24');
   }
   drawHead(ctx, person, x, y - 18 - tallExtra, d);
   if (person.nk) {
@@ -336,17 +345,28 @@ export function createPeopleManager(donors, unlockedLevel) {
     const waitingCount = people.filter(
       (o) => o !== q && o.lv === q.lv && ['toq', 'wait', 'board'].includes(o.s)
     ).length;
-    q.tx = 60 + 6 * Math.min(waitingCount, 4);
+    q.tx = Math.min(220, 62 + 8 * waitingCount);
     q.s = 'toq';
   };
 
+  const DOOR_X = 87;
+
   const spawn = (q, x) => {
     q.lv = 0;
+    q.oy = 0;
     q.pose = 'stand';
     q.x = x;
     if (maxLevel > 0) {
-      q.goal = 1 + Math.floor(Math.random() * maxLevel);
-      goQueue(q);
+      if (Math.random() < 0.35) {
+        q.tx = DOOR_X;
+        q.s = 'todoor';
+      } else {
+        q.goal = 1 + Math.floor(Math.random() * maxLevel);
+        goQueue(q);
+      }
+    } else if (Math.random() < 0.55) {
+      q.tx = DOOR_X;
+      q.s = 'todoor';
     } else {
       q.s = 'stroll';
       q.tx = randRange(68, 220);
@@ -423,12 +443,14 @@ export function createPeopleManager(donors, unlockedLevel) {
       }
       if (maxLevel === 0 && q.s !== 'off' && q.s !== 'ride' && q.s !== 'leave') {
         q.lv = 0;
+        q.oy = 0;
         q.pose = 'stand';
         q.spot = null;
         q.s = 'stroll';
         q.tx = randRange(68, 220);
       } else if (q.lv > maxLevel) {
         q.lv = maxLevel;
+        q.oy = 0;
         q.pose = 'stand';
         q.spot = null;
         goQueue(q);
@@ -456,7 +478,33 @@ export function createPeopleManager(donors, unlockedLevel) {
       switch (q.s) {
         case 'off':
           if ((q.t -= dt) <= 0) {
-            spawn(q, Math.random() < 0.5 ? -12 : 268);
+            if (Math.random() < 0.28) {
+              // Emerge directly from the ground-floor entrance door
+              q.lv = 0;
+              q.oy = 0;
+              q.pose = 'stand';
+              q.x = DOOR_X;
+              q.fromDoor = true;
+              q.s = 'leave';
+            } else {
+              spawn(q, Math.random() < 0.5 ? -12 : 268);
+            }
+          }
+          break;
+        case 'todoor':
+          if (moveTo(28)) {
+            q.s = 'indoor';
+            q.t = randRange(6, 16);
+          }
+          break;
+        case 'indoor':
+          if ((q.t -= dt) <= 0) {
+            q.lv = 0;
+            q.oy = 0;
+            q.x = DOOR_X;
+            q.pose = 'stand';
+            q.fromDoor = true;
+            q.s = 'leave';
           }
           break;
         case 'stroll':
@@ -512,7 +560,11 @@ export function createPeopleManager(donors, unlockedLevel) {
           break;
         case 'leave':
           q.tx = q.x < 128 ? -16 : 272;
+          if (q.fromDoor && Math.abs(q.x - DOOR_X) > 20) {
+            q.fromDoor = false;
+          }
           if (moveTo(32)) {
+            q.fromDoor = false;
             q.s = 'off';
             q.t = randRange(4, 14);
           }
@@ -525,11 +577,19 @@ export function createPeopleManager(donors, unlockedLevel) {
 
   const draw = (ctx) => {
     for (const q of people) {
-      if (q.s !== 'ride' && q.s !== 'off') {
+      if (q.s !== 'ride' && q.s !== 'off' && q.s !== 'indoor') {
         drawPerson(ctx, q, q.x, GROUND_Y - FLOOR_H * q.lv);
       }
     }
   };
 
-  return { people, spawn, afterExit, update, draw, setUnlockedLevel };
+  const isDoorActive = () =>
+    people.some(
+      (q) =>
+        q.lv === 0 &&
+        Math.abs(q.x - DOOR_X) < 18 &&
+        (q.s === 'todoor' || (q.s === 'leave' && q.fromDoor))
+    );
+
+  return { people, spawn, afterExit, update, draw, setUnlockedLevel, isDoorActive };
 }

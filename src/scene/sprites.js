@@ -22,25 +22,3 @@ export function drawGridSprite(ctx, x, y, rows, palette, pixelSize = 1, flipX = 
     }
   }
 }
-
-const spriteCache = new Map();
-
-export function loadSprite(src) {
-  if (spriteCache.has(src)) {
-    return spriteCache.get(src);
-  }
-  const entry = { img: new Image(), loaded: false };
-  entry.img.onload = () => {
-    entry.loaded = true;
-  };
-  entry.img.src = src;
-  spriteCache.set(src, entry);
-  return entry;
-}
-
-export function drawSprite(ctx, entry, x, y, w, h) {
-  if (!entry?.loaded) return false;
-  ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(entry.img, x | 0, y | 0, w | 0, h | 0);
-  return true;
-}

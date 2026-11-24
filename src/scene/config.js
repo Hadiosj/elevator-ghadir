@@ -8,7 +8,6 @@ export const SHAFT_X = 20;
 export const SHAFT_W = 32;
 export const WALL_LEFT = 16;
 export const WALL_RIGHT = 240;
-export const ROOM_MID_X = 146;
 
 export const SKIN_TONES = ['#f2c9a0', '#d9a066', '#a86b3c', '#7a4a2a'];
 export const HAIR_COLORS = ['#2b1b12', '#5a3825', '#c9a227', '#141414'];
@@ -25,8 +24,7 @@ export const SHIRT_COLORS = [
 export const PANT_COLORS = ['#34495e', '#2c3e50', '#6c7a89', '#5d4037'];
 export const BOOK_COLORS = ['#e74c3c', '#3498db', '#f1c40f', '#2ecc71', '#9b59b6'];
 
-export const FLOOR_WALLS_LEFT = ['#d8dfe4', '#ebe5d5', '#f4f6f8', '#efe5d0'];
-export const FLOOR_WALLS_RIGHT = ['#d8dfe4', '#ebe5d5', '#f4f6f8', '#efe5d0'];
+export const FLOOR_WALLS = ['#d8dfe4', '#ebe5d5', '#f4f6f8', '#efe5d0'];
 
 export function mixColor(hexA, hexB, t) {
   const parse = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
