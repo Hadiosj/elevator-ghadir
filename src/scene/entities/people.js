@@ -304,6 +304,8 @@ export function drawPerson(ctx, person, x, fyBase) {
 }
 
 export function createPeopleManager(donors, unlockedLevel) {
+  let maxLevel = unlockedLevel;
+
   const people = donors.map((donor, idx) => {
     const isWoman = idx % 2 === 1;
     return {
@@ -342,8 +344,8 @@ export function createPeopleManager(donors, unlockedLevel) {
     q.lv = 0;
     q.pose = 'stand';
     q.x = x;
-    if (unlockedLevel > 0) {
-      q.goal = 1 + Math.floor(Math.random() * unlockedLevel);
+    if (maxLevel > 0) {
+      q.goal = 1 + Math.floor(Math.random() * maxLevel);
       goQueue(q);
     } else {
       q.s = 'stroll';
@@ -390,9 +392,9 @@ export function createPeopleManager(donors, unlockedLevel) {
     }
   };
 
-  if (unlockedLevel > 0) {
+  if (maxLevel > 0) {
     people.slice(0, 5).forEach((q) => {
-      const level = 1 + Math.floor(Math.random() * unlockedLevel);
+      const level = 1 + Math.floor(Math.random() * maxLevel);
       const spot = pickSpot(q, level);
       if (spot) {
         startAct(q, level, spot);
@@ -403,6 +405,36 @@ export function createPeopleManager(donors, unlockedLevel) {
       spawn(q, 76 + idx * 24);
     });
   }
+
+  const setUnlockedLevel = (nextLevel) => {
+    const prev = maxLevel;
+    maxLevel = nextLevel;
+    if (prev === 0 && maxLevel > 0) {
+      for (const q of people) {
+        if (q.s === 'stroll' || q.s === 'pause') {
+          q.goal = 1 + Math.floor(Math.random() * maxLevel);
+          goQueue(q);
+        }
+      }
+    }
+    for (const q of people) {
+      if (q.goal > maxLevel) {
+        q.goal = maxLevel > 0 ? 1 + Math.floor(Math.random() * maxLevel) : 0;
+      }
+      if (maxLevel === 0 && q.s !== 'off' && q.s !== 'ride' && q.s !== 'leave') {
+        q.lv = 0;
+        q.pose = 'stand';
+        q.spot = null;
+        q.s = 'stroll';
+        q.tx = randRange(68, 220);
+      } else if (q.lv > maxLevel) {
+        q.lv = maxLevel;
+        q.pose = 'stand';
+        q.spot = null;
+        goQueue(q);
+      }
+    }
+  };
 
   const update = (dt, tt, elevator) => {
     for (const q of people) {
@@ -499,5 +531,5 @@ export function createPeopleManager(donors, unlockedLevel) {
     }
   };
 
-  return { people, spawn, afterExit, update, draw };
+  return { people, spawn, afterExit, update, draw, setUnlockedLevel };
 }

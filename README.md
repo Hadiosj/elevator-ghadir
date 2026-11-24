@@ -55,10 +55,9 @@ npm run build    # outputs dist/
 
 ### 1. UX & Mobile-First Refinements
 - [x] Remove tap-to-toast messages on people, the cat, and the pigeon, as well as the intro hint toast.
-- [x] Improve header readability on small phone screens (clean sans-serif UI font for numbers/controls, pixel font only for title).
-- [x] Refine `.sg` / `.tg` canvas overlays so milestone badges and the current-amount tag never clip or collide on narrow viewports.
-- [x] Keep floor tiles calm and static (do not summon/highlight the elevator; later tapping a tile can zoom into that floor for details).
-- [x] Add a clean desktop layout without extra clutter (no donor list, no theme switch).
+- [x] Improve header readability on small phone screens (clean sans-serif UI font for title, numbers, and `Donner` button).
+- [x] Remove canvas money overlays and bottom floor bar so the building fills maximum screen space on phones.
+- [x] Keep the UI minimal (no donor list, no manual theme switch).
 
 ### 2. Payments & Donations
 - [ ] Choose payment provider(s) (e.g., **Stripe Checkout** for Card / Apple Pay / Google Pay on mobile, and/or **HelloAsso** / bank transfer instructions).

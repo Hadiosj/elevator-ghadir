@@ -3,6 +3,8 @@ import { rect } from '../sprites.js';
 import { drawPerson } from './people.js';
 
 export function createElevator(unlockedLevel) {
+  let maxLevel = unlockedLevel;
+
   const car = {
     off: 0,
     tgt: null,
@@ -13,10 +15,26 @@ export function createElevator(unlockedLevel) {
 
   const levelAt = (offset) => {
     const k = Math.round(offset / FLOOR_H);
-    return Math.abs(offset - k * FLOOR_H) < 2 && k <= unlockedLevel ? k : -1;
+    return Math.abs(offset - k * FLOOR_H) < 2 && k <= maxLevel ? k : -1;
   };
 
   car.levelAt = levelAt;
+
+  const setUnlockedLevel = (nextLevel) => {
+    maxLevel = nextLevel;
+    const maxOff = FLOOR_H * maxLevel;
+    if (car.off > maxOff) {
+      car.off = maxOff;
+    }
+    if (car.tgt != null && car.tgt > maxOff) {
+      car.tgt = maxOff;
+    }
+    for (const rider of car.riders) {
+      if (rider.dest > maxLevel) {
+        rider.dest = maxLevel;
+      }
+    }
+  };
 
   const update = (dt, peopleMgr) => {
     const { people, afterExit } = peopleMgr;
@@ -133,5 +151,5 @@ export function createElevator(unlockedLevel) {
     rect(ctx, SHAFT_X + SHAFT_W - 2 - doorW, y + 2, doorW, 30, '#9aa7b4');
   };
 
-  return { car, update, draw };
+  return { car, update, draw, setUnlockedLevel };
 }

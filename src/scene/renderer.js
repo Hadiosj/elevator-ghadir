@@ -23,21 +23,30 @@ import { drawSecondFloorAnimated, drawSecondFloorForeground } from './floors/flo
 import { rect } from './sprites.js';
 
 export function mountScene({ canvasEl, campaign }) {
-  const metrics = getCampaignMetrics(campaign);
-  const { progress, unlockedLevel } = metrics;
-  const reach = progress * TOP_OFFSET;
+  let { progress, unlockedLevel } = getCampaignMetrics(campaign);
+  let reach = progress * TOP_OFFSET;
   const day = getDayFactor();
 
   canvasEl.width = CANVAS_W;
   canvasEl.height = CANVAS_H;
   const ctx = canvasEl.getContext('2d');
 
-  const bgCanvas = buildStaticScene(day, progress);
+  let bgCanvas = buildStaticScene(day, progress);
   const elevator = createElevator(unlockedLevel);
   const peopleMgr = createPeopleManager(campaign.donors, unlockedLevel);
   const ambient = createAmbientCharacters();
   const carsMgr = createCarsManager();
   const cat = createCat();
+
+  const updateCampaign = (nextCampaign) => {
+    const metrics = getCampaignMetrics(nextCampaign);
+    progress = metrics.progress;
+    unlockedLevel = metrics.unlockedLevel;
+    reach = progress * TOP_OFFSET;
+    bgCanvas = buildStaticScene(day, progress);
+    elevator.setUnlockedLevel(unlockedLevel);
+    peopleMgr.setUnlockedLevel(unlockedLevel);
+  };
 
   let tt = 0;
   let lastTs = 0;
@@ -81,6 +90,7 @@ export function mountScene({ canvasEl, campaign }) {
   rafId = requestAnimationFrame(frame);
 
   return {
+    updateCampaign,
     destroy: () => {
       cancelAnimationFrame(rafId);
     }
