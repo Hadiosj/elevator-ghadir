@@ -3,14 +3,20 @@ import { FLOOR_NAMES, formatEur, getCampaignMetrics } from '../data/campaign.js'
 export function createHeader(campaign, { onDonate }) {
   const el = document.createElement('header');
   el.className = 'hdr';
+  const iconSrc = `${import.meta.env.BASE_URL}al-ghadir-icon.png`;
 
   el.innerHTML = `
     <div class="hdr-top">
-      <div class="hdr-info">
-        <div class="hdr-eyebrow">L'ascenseur du centre</div>
-        <div class="amt-row">
-          <span class="amt-main"></span>
-          <span class="amt-goal"></span>
+      <div class="hdr-brand">
+        <div class="hdr-logo-wrap">
+          <img class="hdr-logo" src="${iconSrc}" alt="Centre Al Ghadir" width="32" height="32" />
+        </div>
+        <div class="hdr-info">
+          <div class="hdr-eyebrow">Centre Al Ghadir · L'ascenseur</div>
+          <div class="amt-row">
+            <span class="amt-main"></span>
+            <span class="amt-goal"></span>
+          </div>
         </div>
       </div>
       <button type="button" class="donate-btn">Donner</button>

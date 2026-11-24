@@ -1,4 +1,24 @@
-import { rect } from '../sprites.js';
+import { drawGridSprite, rect } from '../sprites.js';
+
+// Miniature pixel-art Al Ghadir hands emblem (emerald green & warm gold)
+const AL_GHADIR_EMBLEM = [
+  '....g......',
+  '...gg......',
+  '..ggg......',
+  '..ggg...g..',
+  '.gggg..gg..',
+  '.gggg.gg...',
+  '.gggggg....',
+  'd.gggg.....',
+  'd..gg..dd..',
+  'dd....ddd..',
+  'dddddddd...',
+  'ddddddd....',
+  '.dddddd....',
+  '.dddddd....',
+  '.dddd.gg...',
+  '.ddd..ggg..'
+];
 
 export function drawParkingFloor(ctx, fy, day = 1) {
   // Left lobby / entrance zone (x: 52..126)
@@ -16,6 +36,11 @@ export function drawParkingFloor(ctx, fy, day = 1) {
   // Entrance awning
   rect(ctx, 70, fy - 45, 34, 5, '#ff7a1a');
   rect(ctx, 70, fy - 42, 34, 2, '#c95206');
+
+  // Framed Al Ghadir emblem plaque mounted above the entrance awning
+  rect(ctx, 77, fy - 71, 20, 22, '#2b2d42');
+  rect(ctx, 78, fy - 70, 18, 20, '#faf8f2');
+  drawGridSprite(ctx, 82, fy - 68, AL_GHADIR_EMBLEM, { g: '#0e8f44', d: '#d4af4a' }, 1);
 
   // Potted shrubs flanking the entrance on the ground
   for (const px of [58, 106]) {
