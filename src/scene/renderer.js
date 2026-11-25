@@ -13,7 +13,6 @@ import {
   GROUND_Y,
   SHAFT_W,
   SHAFT_X,
-  TOP_OFFSET,
   clamp01,
   getDayFactor,
   mixColor,
@@ -35,6 +34,7 @@ import { drawParkingDoorAnimated } from './floors/parking.js';
 import { rect } from './sprites.js';
 
 const CONFETTI_COLORS = ['#ff7a1a', '#ffd23f', '#2ecc71', '#3498db', '#ff5d8f', '#ffffff'];
+const MAX_SCENE_W = 1280;
 
 export function mountScene({ canvasEl, campaign }) {
   const reducedMotionQuery = window.matchMedia?.('(prefers-reduced-motion: reduce)');
@@ -45,10 +45,15 @@ export function mountScene({ canvasEl, campaign }) {
   reducedMotionQuery?.addEventListener?.('change', onMotionChange);
 
   let { progress, unlockedLevel } = getCampaignMetrics(campaign);
-  let targetReach = progress * TOP_OFFSET;
-  let displayReach = targetReach;
   let day = getDayFactor();
   let completed = progress >= 1;
+
+  const bounds = {
+    sceneW: CANVAS_W,
+    offsetX: 0,
+    minX: 0,
+    maxX: CANVAS_W
+  };
 
   const syncSkyTheme = (dayFactor) => {
     const topSky = mixColor('#0c1533', '#5baaf7', dayFactor);
@@ -60,17 +65,61 @@ export function mountScene({ canvasEl, campaign }) {
   };
   syncSkyTheme(day);
 
-  canvasEl.width = CANVAS_W;
+  canvasEl.width = bounds.sceneW;
   canvasEl.height = CANVAS_H;
   const ctx = canvasEl.getContext('2d');
   ctx.imageSmoothingEnabled = false;
 
-  let bgCanvas = buildStaticScene(day, completed);
-  const elevator = createElevator(unlockedLevel);
-  const peopleMgr = createPeopleManager(campaign.donors, unlockedLevel);
+  let bgCanvas = buildStaticScene(day, completed, bounds);
+  const elevator = createElevator();
+  const peopleMgr = createPeopleManager(campaign.donors);
   const ambient = createAmbientCharacters();
   const carsMgr = createCarsManager();
   const cat = createCat();
+
+  const wrapEl = canvasEl.parentElement;
+  const stageEl = wrapEl?.parentElement || wrapEl;
+
+  const updateViewportSize = () => {
+    if (!stageEl || !wrapEl) return;
+    const stageW = stageEl.clientWidth;
+    const stageH = stageEl.clientHeight;
+    if (stageW <= 0 || stageH <= 0) return;
+
+    const stageRatio = stageW / stageH;
+    const baseRatio = CANVAS_W / CANVAS_H;
+
+    let nextW = CANVAS_W;
+    if (stageRatio > baseRatio) {
+      nextW = Math.min(MAX_SCENE_W, Math.max(CANVAS_W, Math.round(CANVAS_H * stageRatio)));
+      if (nextW % 2 === 1) nextW += 1;
+      wrapEl.style.width = `${stageW}px`;
+      wrapEl.style.height = `${stageH}px`;
+    } else {
+      const fitH = Math.min(stageH, Math.round(stageW / baseRatio));
+      const fitW = Math.round(fitH * baseRatio);
+      wrapEl.style.width = `${fitW}px`;
+      wrapEl.style.height = `${fitH}px`;
+    }
+
+    if (nextW !== bounds.sceneW) {
+      bounds.sceneW = nextW;
+      bounds.offsetX = Math.floor((nextW - CANVAS_W) / 2);
+      bounds.minX = -bounds.offsetX;
+      bounds.maxX = nextW - bounds.offsetX;
+      canvasEl.width = bounds.sceneW;
+      canvasEl.height = CANVAS_H;
+      ctx.imageSmoothingEnabled = false;
+      bgCanvas = buildStaticScene(day, completed, bounds);
+    }
+  };
+
+  let resizeObserver = null;
+  if (typeof ResizeObserver !== 'undefined' && stageEl) {
+    resizeObserver = new ResizeObserver(updateViewportSize);
+    resizeObserver.observe(stageEl);
+  }
+  updateViewportSize();
 
   const particles = [];
 
@@ -90,38 +139,17 @@ export function mountScene({ canvasEl, campaign }) {
     }
   };
 
-  const spawnBuildSparks = (reachY) => {
-    if (reducedMotion) return;
-    particles.push({
-      x: SHAFT_X + randRange(2, SHAFT_W - 4),
-      y: reachY,
-      vx: randRange(-26, 26),
-      vy: randRange(-38, -10),
-      life: randRange(0.25, 0.55),
-      color: Math.random() < 0.5 ? '#ffeaa7' : '#ff7a1a',
-      size: 2
-    });
-  };
-
   const updateCampaign = (nextCampaign) => {
     const prevUnlocked = unlockedLevel;
     const metrics = getCampaignMetrics(nextCampaign);
     progress = metrics.progress;
     unlockedLevel = metrics.unlockedLevel;
-    targetReach = progress * TOP_OFFSET;
-
-    if (reducedMotion) {
-      displayReach = targetReach;
-    }
 
     const nextCompleted = progress >= 1;
     if (nextCompleted !== completed) {
       completed = nextCompleted;
-      bgCanvas = buildStaticScene(day, completed);
+      bgCanvas = buildStaticScene(day, completed, bounds);
     }
-
-    elevator.setUnlockedLevel(unlockedLevel);
-    peopleMgr.setUnlockedLevel(unlockedLevel);
 
     if (unlockedLevel > prevUnlocked) {
       for (let lv = prevUnlocked + 1; lv <= unlockedLevel; lv++) {
@@ -149,28 +177,12 @@ export function mountScene({ canvasEl, campaign }) {
       if (Math.abs(nextDay - day) > 0.03) {
         day = nextDay;
         syncSkyTheme(day);
-        bgCanvas = buildStaticScene(day, completed);
+        bgCanvas = buildStaticScene(day, completed, bounds);
       }
-    }
-
-    // Smoothly animate construction reach bar
-    if (Math.abs(targetReach - displayReach) > 0.3) {
-      const diff = targetReach - displayReach;
-      const step = Math.sign(diff) * Math.max(24, Math.abs(diff) * 3.5) * dt;
-      if (Math.abs(step) >= Math.abs(diff)) {
-        displayReach = targetReach;
-      } else {
-        displayReach += step;
-        if (diff > 0 && Math.random() < 0.65) {
-          spawnBuildSparks(GROUND_Y - displayReach);
-        }
-      }
-    } else {
-      displayReach = targetReach;
     }
 
     // Update entities
-    peopleMgr.update(dt, tt, elevator);
+    peopleMgr.update(dt, tt, elevator, bounds);
     const doorWantOpen = peopleMgr.isDoorActive();
     if (reducedMotion) {
       doorOpen = doorWantOpen ? 1 : 0;
@@ -179,7 +191,7 @@ export function mountScene({ canvasEl, campaign }) {
     }
     updateAmbientCharacters(ambient, dt, tt);
     elevator.update(dt, peopleMgr);
-    carsMgr.update(dt, peopleMgr);
+    carsMgr.update(dt, peopleMgr, bounds);
     cat.update(dt);
 
     // Update celebration & spark particles
@@ -195,11 +207,15 @@ export function mountScene({ canvasEl, campaign }) {
     }
 
     // Render scene (clear transparent sky first)
-    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+    ctx.clearRect(0, 0, bounds.sceneW, CANVAS_H);
     ctx.drawImage(bgCanvas, 0, 0);
-    drawAnimatedSky(ctx, day, tt, reducedMotion);
+
+    ctx.save();
+    ctx.translate(bounds.offsetX, 0);
+
+    drawAnimatedSky(ctx, day, tt, reducedMotion, bounds);
     drawAnimatedCraneHook(ctx, completed, tt, reducedMotion);
-    drawShaftBlueprint(ctx, displayReach, tt, reducedMotion);
+    drawShaftBlueprint(ctx, elevator.car.off);
 
     drawSecondFloorAnimated(ctx, GROUND_Y - 2 * FLOOR_H, tt, reducedMotion);
     drawParkingDoorAnimated(ctx, GROUND_Y, day, doorOpen);
@@ -228,7 +244,7 @@ export function mountScene({ canvasEl, campaign }) {
     for (const q of peopleMgr.people) {
       if (q.s === 'wait') waitingFloors.add(q.lv);
     }
-    drawFloorStatusOverlay(ctx, unlockedLevel, waitingFloors);
+    drawFloorStatusOverlay(ctx, waitingFloors);
 
     carsMgr.drawTraffic(ctx, day);
     drawPigeon(ctx, tt);
@@ -239,6 +255,8 @@ export function mountScene({ canvasEl, campaign }) {
       rect(ctx, p.x, p.y, p.size, p.size, p.color);
     }
     ctx.globalAlpha = 1;
+
+    ctx.restore();
 
     rafId = requestAnimationFrame(frame);
   };
@@ -260,6 +278,7 @@ export function mountScene({ canvasEl, campaign }) {
     updateCampaign,
     destroy: () => {
       cancelAnimationFrame(rafId);
+      resizeObserver?.disconnect();
       document.removeEventListener('visibilitychange', onVisibilityChange);
       reducedMotionQuery?.removeEventListener?.('change', onMotionChange);
     }

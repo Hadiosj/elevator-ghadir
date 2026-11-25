@@ -1,4 +1,5 @@
 import {
+  CANVAS_W,
   FLOOR_H,
   GROUND_Y,
   HAIR_COLORS,
@@ -312,8 +313,9 @@ export function drawPerson(ctx, person, x, fyBase) {
   drawTierHat(y - 18 - tallExtra);
 }
 
-export function createPeopleManager(donors, unlockedLevel) {
-  let maxLevel = unlockedLevel;
+const MAX_FLOOR = 3;
+
+export function createPeopleManager(donors) {
 
   const people = donors.map((donor, idx) => {
     const isWoman = idx % 2 === 1;
@@ -356,20 +358,12 @@ export function createPeopleManager(donors, unlockedLevel) {
     q.oy = 0;
     q.pose = 'stand';
     q.x = x;
-    if (maxLevel > 0) {
-      if (Math.random() < 0.35) {
-        q.tx = DOOR_X;
-        q.s = 'todoor';
-      } else {
-        q.goal = 1 + Math.floor(Math.random() * maxLevel);
-        goQueue(q);
-      }
-    } else if (Math.random() < 0.55) {
+    if (Math.random() < 0.35) {
       q.tx = DOOR_X;
       q.s = 'todoor';
     } else {
-      q.s = 'stroll';
-      q.tx = randRange(68, 220);
+      q.goal = 1 + Math.floor(Math.random() * MAX_FLOOR);
+      goQueue(q);
     }
   };
 
@@ -412,53 +406,77 @@ export function createPeopleManager(donors, unlockedLevel) {
     }
   };
 
-  if (maxLevel > 0) {
-    people.slice(0, 5).forEach((q) => {
-      const level = 1 + Math.floor(Math.random() * maxLevel);
-      const spot = pickSpot(q, level);
-      if (spot) {
-        startAct(q, level, spot);
-        q.t = randRange(3, 14);
-      }
-    });
-    people.slice(5, 7).forEach((q, idx) => {
-      spawn(q, 76 + idx * 24);
-    });
-  }
+  people.slice(0, 5).forEach((q) => {
+    const level = 1 + Math.floor(Math.random() * MAX_FLOOR);
+    const spot = pickSpot(q, level);
+    if (spot) {
+      startAct(q, level, spot);
+      q.t = randRange(3, 14);
+    }
+  });
+  people.slice(5, 7).forEach((q, idx) => {
+    spawn(q, 76 + idx * 24);
+  });
 
-  const setUnlockedLevel = (nextLevel) => {
-    const prev = maxLevel;
-    maxLevel = nextLevel;
-    if (prev === 0 && maxLevel > 0) {
-      for (const q of people) {
-        if (q.s === 'stroll' || q.s === 'pause') {
-          q.goal = 1 + Math.floor(Math.random() * maxLevel);
-          goQueue(q);
+  // Desktop-only ambient passersby strolling end-to-end along the wide street sidewalk
+  const passersby = Array.from({ length: 4 }, (_, idx) => {
+    const isWoman = idx % 2 === 0;
+    return {
+      sk: pickRandom(SKIN_TONES),
+      hr: pickRandom(HAIR_COLORS),
+      sh: pickRandom(SHIRT_COLORS),
+      pt: pickRandom(PANT_COLORS),
+      hijab: isWoman,
+      hj: isWoman ? pickRandom(HIJAB_COLORS) : null,
+      active: false,
+      t: randRange(2, 12),
+      x: 0,
+      tx: 0,
+      d: 1,
+      a2: Math.random() * 6,
+      mvg: 0,
+      pose: 'stand',
+      speed: randRange(22, 30)
+    };
+  });
+
+  const update = (
+    dt,
+    tt,
+    elevator,
+    bounds = { minX: 0, maxX: CANVAS_W, offsetX: 0 }
+  ) => {
+    const isDesktop = bounds.offsetX > 50;
+    for (const p of passersby) {
+      p.a2 += dt * 8;
+      if (!isDesktop) {
+        p.active = false;
+        p.mvg = 0;
+        continue;
+      }
+      if (!p.active) {
+        if ((p.t -= dt) <= 0) {
+          const fromLeft = Math.random() < 0.5;
+          p.x = fromLeft ? bounds.minX - 12 : bounds.maxX + 12;
+          p.tx = fromLeft ? bounds.maxX + 16 : bounds.minX - 16;
+          p.d = fromLeft ? 1 : -1;
+          p.active = true;
+          p.mvg = 1;
+        }
+      } else {
+        const dx = p.tx - p.x;
+        if (Math.abs(dx) < 2) {
+          p.active = false;
+          p.mvg = 0;
+          p.t = randRange(5, 15);
+        } else {
+          p.x += Math.sign(dx) * p.speed * dt;
+          p.d = Math.sign(dx);
+          p.mvg = 1;
         }
       }
     }
-    for (const q of people) {
-      if (q.goal > maxLevel) {
-        q.goal = maxLevel > 0 ? 1 + Math.floor(Math.random() * maxLevel) : 0;
-      }
-      if (maxLevel === 0 && q.s !== 'off' && q.s !== 'ride' && q.s !== 'leave') {
-        q.lv = 0;
-        q.oy = 0;
-        q.pose = 'stand';
-        q.spot = null;
-        q.s = 'stroll';
-        q.tx = randRange(68, 220);
-      } else if (q.lv > maxLevel) {
-        q.lv = maxLevel;
-        q.oy = 0;
-        q.pose = 'stand';
-        q.spot = null;
-        goQueue(q);
-      }
-    }
-  };
 
-  const update = (dt, tt, elevator) => {
     for (const q of people) {
       q.a2 += dt * 8;
       q.mvg = 0;
@@ -487,7 +505,7 @@ export function createPeopleManager(donors, unlockedLevel) {
               q.fromDoor = true;
               q.s = 'leave';
             } else {
-              spawn(q, Math.random() < 0.5 ? -12 : 268);
+              spawn(q, Math.random() < 0.5 ? bounds.minX - 12 : bounds.maxX + 12);
             }
           }
           break;
@@ -559,12 +577,16 @@ export function createPeopleManager(donors, unlockedLevel) {
           }
           break;
         case 'leave':
-          q.tx = q.x < 128 ? -16 : 272;
+          if (q.leaveDir == null) {
+            q.leaveDir = q.x < 128 ? -1 : 1;
+          }
+          q.tx = q.leaveDir < 0 ? bounds.minX - 16 : bounds.maxX + 16;
           if (q.fromDoor && Math.abs(q.x - DOOR_X) > 20) {
             q.fromDoor = false;
           }
           if (moveTo(32)) {
             q.fromDoor = false;
+            q.leaveDir = null;
             q.s = 'off';
             q.t = randRange(4, 14);
           }
@@ -576,6 +598,11 @@ export function createPeopleManager(donors, unlockedLevel) {
   };
 
   const draw = (ctx) => {
+    for (const p of passersby) {
+      if (p.active) {
+        drawPerson(ctx, p, p.x, GROUND_Y);
+      }
+    }
     for (const q of people) {
       if (q.s !== 'ride' && q.s !== 'off' && q.s !== 'indoor') {
         drawPerson(ctx, q, q.x, GROUND_Y - FLOOR_H * q.lv);
@@ -591,5 +618,5 @@ export function createPeopleManager(donors, unlockedLevel) {
         (q.s === 'todoor' || (q.s === 'leave' && q.fromDoor))
     );
 
-  return { people, spawn, afterExit, update, draw, setUnlockedLevel, isDoorActive };
+  return { people, spawn, afterExit, update, draw, isDoorActive };
 }

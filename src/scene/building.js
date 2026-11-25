@@ -6,11 +6,11 @@ import {
   GROUND_Y,
   SHAFT_W,
   SHAFT_X,
-  TOP_OFFSET,
   WALL_LEFT,
   WALL_RIGHT
 } from './config.js';
 import { drawGridSprite, rect } from './sprites.js';
+import { drawNeighborhood } from './neighborhood.js';
 import { drawParkingFloor } from './floors/parking.js';
 import { drawFirstFloor } from './floors/floor1.js';
 import { drawSecondFloor } from './floors/floor2.js';
@@ -29,8 +29,8 @@ const MOON_SPRITE = [
   '...xxxx..'
 ];
 
-// Scattered stars strictly in the visible sky (above the roof y < 44, or side sky margins)
-const STARS = [
+// Scattered stars strictly in the visible sky (above the roof y < 44, or wide side sky)
+const BASE_STARS = [
   { x: 10, y: 14, phase: 0.2, big: false },
   { x: 48, y: 9, phase: 1.1, big: true },
   { x: 64, y: 24, phase: 2.3, big: false },
@@ -43,17 +43,27 @@ const STARS = [
   { x: 184, y: 26, phase: 3.7, big: false },
   { x: 196, y: 6, phase: 1.5, big: false },
   { x: 238, y: 16, phase: 2.1, big: true },
-  { x: 247, y: 32, phase: 0.9, big: false },
-  { x: 6, y: 68, phase: 3.5, big: false },
-  { x: 9, y: 112, phase: 1.4, big: false },
-  { x: 248, y: 84, phase: 2.6, big: false },
-  { x: 245, y: 130, phase: 4.0, big: false }
+  { x: 247, y: 32, phase: 0.9, big: false }
 ];
+
+const FLANK_STARS = Array.from({ length: 46 }, (_, i) => {
+  const onLeft = i % 2 === 0;
+  const step = Math.floor(i / 2);
+  const x = onLeft ? -20 - ((step * 37 + 13) % 520) : 272 + ((step * 41 + 19) % 520);
+  const y = 8 + ((i * 29 + 17) % 136);
+  return { x, y, phase: i * 0.75, big: i % 4 === 0 };
+});
+
+const STARS = [...BASE_STARS, ...FLANK_STARS];
 
 const CLOUDS = [
   { baseX: 24, y: 16, w: 28, speed: 3.2 },
   { baseX: 132, y: 10, w: 22, speed: 2.1 },
-  { baseX: 208, y: 24, w: 30, speed: 2.7 }
+  { baseX: 208, y: 24, w: 30, speed: 2.7 },
+  { baseX: -140, y: 28, w: 34, speed: 2.4 },
+  { baseX: 340, y: 18, w: 32, speed: 2.9 },
+  { baseX: -320, y: 48, w: 28, speed: 1.9 },
+  { baseX: 520, y: 44, w: 30, speed: 2.2 }
 ];
 
 function drawWindow(ctx, x, y, day) {
@@ -63,28 +73,38 @@ function drawWindow(ctx, x, y, day) {
   rect(ctx, x, y + 7, 12, 2, '#2b2d42');
 }
 
-export function buildStaticScene(day, completed) {
+export function buildStaticScene(
+  day,
+  completed,
+  bounds = { sceneW: CANVAS_W, offsetX: 0, minX: 0, maxX: CANVAS_W }
+) {
   const bg = document.createElement('canvas');
-  bg.width = CANVAS_W;
+  bg.width = bounds.sceneW;
   bg.height = CANVAS_H;
   const ctx = bg.getContext('2d');
 
-  // Sky is transparent so the full-viewport CSS sky gradient blends seamlessly behind the scene
+  ctx.save();
+  ctx.translate(bounds.offsetX, 0);
 
-  // Crescent moon at dusk/night (upper-left sky, clear of the roof crane)
+  // Crescent moon at dusk/night (clear of the roof crane and neighboring buildings)
   if (day < 0.55) {
-    drawGridSprite(ctx, 22, 8, MOON_SPRITE, { x: '#fff3b0' }, 2);
+    const moonX = bounds.offsetX >= 36 ? -48 : 22;
+    const moonY = bounds.offsetX >= 36 ? 18 : 8;
+    drawGridSprite(ctx, moonX, moonY, MOON_SPRITE, { x: '#fff3b0' }, 2);
   }
 
-  // Sidewalk & asphalt ground
-  rect(ctx, 0, GROUND_Y, CANVAS_W, CANVAS_H - GROUND_Y, '#3a3d46');
-  rect(ctx, 0, GROUND_Y, CANVAS_W, 4, '#6b6f7a');
-  // Subtle road dashes
-  for (let x = 10; x < CANVAS_W; x += 28) {
+  // Full-width sidewalk & asphalt ground across the entire viewport
+  rect(ctx, bounds.minX, GROUND_Y, bounds.sceneW, CANVAS_H - GROUND_Y, '#3a3d46');
+  rect(ctx, bounds.minX, GROUND_Y, bounds.sceneW, 4, '#6b6f7a');
+  const dashStart = Math.floor(bounds.minX / 28) * 28 + 10;
+  for (let x = dashStart; x < bounds.maxX; x += 28) {
     rect(ctx, x, GROUND_Y + 13, 14, 2, '#5a5e6b');
   }
 
-  // Building outer shell & cornice
+  // Desktop flanking neighborhood scenery (buildings, shops, lamps, trees, bus stop)
+  drawNeighborhood(ctx, day, bounds);
+
+  // Main building outer shell & cornice
   rect(ctx, WALL_LEFT - 2, 48, WALL_RIGHT - WALL_LEFT + 4, GROUND_Y - 48, '#2b2d42');
   rect(ctx, WALL_LEFT, 56, WALL_RIGHT - WALL_LEFT, GROUND_Y - 56, '#f3efe6');
   rect(ctx, WALL_LEFT - 4, 50, WALL_RIGHT - WALL_LEFT + 8, 12, '#cfc8b8');
@@ -94,7 +114,6 @@ export function buildStaticScene(day, completed) {
   for (let k = 0; k < 4; k++) {
     const fy = GROUND_Y - FLOOR_H * k;
     rect(ctx, 52, fy - 86, WALL_RIGHT - 52, 86, FLOOR_WALLS[k]);
-    // Subtle ceiling shadow strip under slab
     rect(ctx, 52, fy - 86, WALL_RIGHT - 52, 2, 'rgba(43, 45, 66, 0.08)');
     if (k > 0) {
       rect(ctx, WALL_LEFT, fy, WALL_RIGHT - WALL_LEFT, 6, '#cfc8b8');
@@ -147,12 +166,20 @@ export function buildStaticScene(day, completed) {
     rect(ctx, 216, 8, 12, 8, '#777777');
   }
 
+  ctx.restore();
   return bg;
 }
 
-export function drawAnimatedSky(ctx, day, tt, reducedMotion) {
+export function drawAnimatedSky(
+  ctx,
+  day,
+  tt,
+  reducedMotion,
+  bounds = { minX: 0, maxX: CANVAS_W }
+) {
   if (day < 0.6) {
     for (const s of STARS) {
+      if (s.x < bounds.minX || s.x > bounds.maxX) continue;
       const alpha = reducedMotion ? 0.8 : 0.45 + 0.55 * Math.sin(tt * 2.2 + s.phase);
       ctx.globalAlpha = alpha;
       rect(ctx, s.x, s.y, s.big ? 2 : 1, s.big ? 2 : 1, '#ffffff');
@@ -160,9 +187,12 @@ export function drawAnimatedSky(ctx, day, tt, reducedMotion) {
     ctx.globalAlpha = 1;
   } else {
     ctx.globalAlpha = 0.9;
+    const span = bounds.maxX - bounds.minX + 96;
     for (const c of CLOUDS) {
+      if (c.y > 32 && c.baseX < 256 && c.baseX > 0) continue;
       const drift = reducedMotion ? 0 : tt * c.speed;
-      const cx = ((c.baseX + drift) % (CANVAS_W + 40)) - 32;
+      const offset = (((c.baseX - bounds.minX + drift) % span) + span) % span;
+      const cx = bounds.minX - 48 + offset;
       rect(ctx, cx, c.y, c.w, 6, '#f4faff');
       rect(ctx, cx + 4, c.y - 4, c.w - 10, 4, '#ffffff');
     }
@@ -178,53 +208,32 @@ export function drawAnimatedCraneHook(ctx, completed, tt, reducedMotion) {
   rect(ctx, 172 + sway, 36, 2, 3, '#333333');
 }
 
-export function drawShaftBlueprint(ctx, reach, tt, reducedMotion) {
-  if (reach >= TOP_OFFSET - 0.5) return;
+export function drawShaftBlueprint(ctx, carOffset) {
+  const yLimit = Math.max(68, Math.min(GROUND_Y, Math.round(GROUND_Y - carOffset - 16)));
+  const blueprintH = yLimit - 68;
+  if (blueprintH <= 0) return;
 
-  const yLimit = Math.min(GROUND_Y - 2, GROUND_Y - reach);
-  const blueprintH = yLimit - 62;
-  if (blueprintH > 0) {
-    rect(ctx, SHAFT_X, 62, SHAFT_W, blueprintH, '#14305e');
-    ctx.globalAlpha = 0.55;
-    for (let x = SHAFT_X + 8; x < SHAFT_X + SHAFT_W; x += 8) {
-      for (let y = yLimit - 2; y > 62; y -= 4) {
-        rect(ctx, x, y, 2, 2, '#6aa3f0');
-      }
-    }
-    for (let y = yLimit - 12; y > 62; y -= 16) {
-      for (let x = SHAFT_X; x < SHAFT_X + SHAFT_W; x += 4) {
-        rect(ctx, x, y, 2, 2, '#6aa3f0');
-      }
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  // Only draw hazard stripe & spark once progress is above ground floor sidewalk
-  if (reach > 3) {
-    const stripeY = Math.min(GROUND_Y - 4, Math.round(GROUND_Y - reach) - 2);
-    for (let x = SHAFT_X; x < SHAFT_X + SHAFT_W; x += 8) {
-      rect(ctx, x, stripeY, 4, 4, '#f1c40f');
-      rect(ctx, x + 4, stripeY, 4, 4, '#1b1b1b');
-    }
-    if (!reducedMotion) {
-      rect(ctx, SHAFT_X + (((tt * 20) | 0) % 28), stripeY + 1, 4, 2, '#ffffff');
+  rect(ctx, SHAFT_X, 68, SHAFT_W, blueprintH, '#14305e');
+  ctx.globalAlpha = 0.55;
+  for (let x = SHAFT_X + 8; x < SHAFT_X + SHAFT_W; x += 8) {
+    for (let y = 70; y < yLimit - 1; y += 4) {
+      rect(ctx, x, y, 2, 2, '#6aa3f0');
     }
   }
+  for (let y = 74; y < yLimit - 1; y += 16) {
+    for (let x = SHAFT_X; x < SHAFT_X + SHAFT_W; x += 4) {
+      rect(ctx, x, y, 2, 2, '#6aa3f0');
+    }
+  }
+  ctx.globalAlpha = 1;
 }
 
-export function drawFloorStatusOverlay(ctx, unlockedLevel, waitingFloors) {
+export function drawFloorStatusOverlay(ctx, waitingFloors) {
   for (let k = 0; k < 4; k++) {
     const fy = GROUND_Y - FLOOR_H * k;
-    const unlocked = k <= unlockedLevel;
-
-    // Subtle cool dimming overlay on locked floors so unlocked progress reads clearly
-    if (!unlocked) {
-      ctx.fillStyle = 'rgba(18, 30, 62, 0.22)';
-      ctx.fillRect(54, fy - 86, WALL_RIGHT - 54, 86);
-    }
 
     // Subtle call indicator light beside the shaft doorway when someone is waiting
-    if (unlocked && waitingFloors.has(k)) {
+    if (waitingFloors.has(k)) {
       const bx = SHAFT_X + SHAFT_W + 4;
       const by = fy - 28;
       rect(ctx, bx, by, 3, 3, '#ff7a1a');

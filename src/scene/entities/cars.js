@@ -122,14 +122,14 @@ export function createCarsManager() {
   let traffic = null;
   let trafficTimer = randRange(10, 22);
 
-  const spawnTraffic = () => {
+  const spawnTraffic = (bounds) => {
     const roll = Math.random();
     const facing = Math.random() < 0.5 ? 1 : -1;
     if (roll < 0.3) {
       traffic = {
         kind: 'bus',
         w: 86,
-        x: facing > 0 ? -96 : CANVAS_W + 16,
+        x: facing > 0 ? bounds.minX - 96 : bounds.maxX + 16,
         facing,
         speed: 54
       };
@@ -137,7 +137,7 @@ export function createCarsManager() {
       traffic = {
         kind: 'scooter',
         w: 28,
-        x: facing > 0 ? -36 : CANVAS_W + 12,
+        x: facing > 0 ? bounds.minX - 36 : bounds.maxX + 12,
         facing,
         speed: 96,
         col: pickRandom(SCOOTER_COLORS),
@@ -150,7 +150,7 @@ export function createCarsManager() {
       traffic = {
         kind: 'car',
         w: 44,
-        x: facing > 0 ? -54 : CANVAS_W + 14,
+        x: facing > 0 ? bounds.minX - 54 : bounds.maxX + 14,
         facing,
         speed: 82,
         col: pickRandom(TRAFFIC_CAR_COLORS)
@@ -164,7 +164,7 @@ export function createCarsManager() {
     return outer.s !== 'gone' && outer.x < 248;
   };
 
-  const update = (dt, peopleMgr) => {
+  const update = (dt, peopleMgr, bounds = { minX: 0, maxX: CANVAS_W }) => {
     for (const c of cars) {
       if (c.s === 'parked') {
         if ((c.t -= dt) <= 0) {
@@ -178,7 +178,7 @@ export function createCarsManager() {
       } else if (c.s === 'out') {
         c.facing = 1;
         c.x += 64 * dt;
-        if (c.x > 276) {
+        if (c.x > bounds.maxX + 20) {
           c.s = 'gone';
           c.t = randRange(5, 14);
         }
@@ -188,7 +188,7 @@ export function createCarsManager() {
             c.t = 2;
           } else {
             c.s = 'in';
-            c.x = 276;
+            c.x = bounds.maxX + 20;
             c.facing = -1;
           }
         }
@@ -211,14 +211,15 @@ export function createCarsManager() {
     if (traffic) {
       traffic.x += traffic.facing * traffic.speed * dt;
       if (
-        (traffic.facing > 0 && traffic.x > CANVAS_W + 20) ||
-        (traffic.facing < 0 && traffic.x + traffic.w < -20)
+        (traffic.facing > 0 && traffic.x > bounds.maxX + 20) ||
+        (traffic.facing < 0 && traffic.x + traffic.w < bounds.minX - 20)
       ) {
         traffic = null;
-        trafficTimer = randRange(18, 38);
+        const wide = bounds.maxX - bounds.minX > 400;
+        trafficTimer = wide ? randRange(12, 26) : randRange(18, 38);
       }
     } else if ((trafficTimer -= dt) <= 0) {
-      spawnTraffic();
+      spawnTraffic(bounds);
     }
   };
 

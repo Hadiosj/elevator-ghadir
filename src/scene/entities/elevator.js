@@ -2,9 +2,9 @@ import { FLOOR_H, GROUND_Y, SHAFT_W, SHAFT_X, clamp01 } from '../config.js';
 import { rect } from '../sprites.js';
 import { drawPerson } from './people.js';
 
-export function createElevator(unlockedLevel) {
-  let maxLevel = unlockedLevel;
+const MAX_FLOOR = 3;
 
+export function createElevator() {
   const car = {
     off: 0,
     tgt: null,
@@ -17,30 +17,13 @@ export function createElevator(unlockedLevel) {
 
   const levelAt = (offset) => {
     const k = Math.round(offset / FLOOR_H);
-    return Math.abs(offset - k * FLOOR_H) < 2 && k <= maxLevel ? k : -1;
+    return Math.abs(offset - k * FLOOR_H) < 2 && k >= 0 && k <= MAX_FLOOR ? k : -1;
   };
 
   car.levelAt = levelAt;
 
-  const setUnlockedLevel = (nextLevel) => {
-    maxLevel = nextLevel;
-    const maxOff = FLOOR_H * maxLevel;
-    if (car.off > maxOff) {
-      car.off = maxOff;
-      car.vel = 0;
-    }
-    if (car.tgt != null && car.tgt > maxOff) {
-      car.tgt = maxOff;
-    }
-    for (const rider of car.riders) {
-      if (rider.dest > maxLevel) {
-        rider.dest = maxLevel;
-      }
-    }
-  };
-
   const inspectLevel = (level) => {
-    const clamped = Math.max(0, Math.min(maxLevel, level));
+    const clamped = Math.max(0, Math.min(MAX_FLOOR, level));
     const target = FLOOR_H * clamped;
     if (Math.abs(target - car.off) >= 2 && car.riders.length === 0) {
       car.tgt = target;
@@ -205,5 +188,5 @@ export function createElevator(unlockedLevel) {
     }
   };
 
-  return { car, update, draw, setUnlockedLevel, inspectLevel };
+  return { car, update, draw, inspectLevel };
 }
